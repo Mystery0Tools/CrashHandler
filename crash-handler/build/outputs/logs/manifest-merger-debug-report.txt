@@ -1,0 +1,37 @@
+-- Merging decision tree log ---
+manifest
+ADDED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+	package
+		ADDED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:11-47
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+		ADDED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+	android:versionCode
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+		ADDED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml:18:1-50
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+uses-sdk
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+		ADDED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+		ADDED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
+		INJECTED from D:\Program\Android\SimpleCrashHandler\crash-handler\src\main\AndroidManifest.xml
