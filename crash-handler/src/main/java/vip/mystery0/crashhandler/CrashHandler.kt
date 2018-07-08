@@ -22,7 +22,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
-import android.text.TextUtils
 import android.util.Log
 import java.io.BufferedWriter
 import java.io.File
@@ -31,7 +30,7 @@ import java.io.PrintWriter
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
+class CrashHandler private constructor() {
 	companion object {
 		private const val TAG = "CrashHandler"
 		@SuppressLint("StaticFieldLeak")
@@ -53,23 +52,19 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 		fun catchException(catchException: CatchException)
 	}
 
-	private var fileNamePrefix = "crash"
-	private var fileNameSuffix = "txt"
-	private var autoCleanTime = 3 * 24 * 60 * 60 * 1000
-	private var isDebug = false
-	private var isAutoClean = false
-	private var dir = File(context.cacheDir, "crashHandler")
+	private var config = CrashConfig()
+	private var dir = File((
+			if (config.inSDCard)
+				context.externalCacheDir
+			else
+				context.cacheDir
+			), config.dirName)
 	private lateinit var defaultCrashHandler: Thread.UncaughtExceptionHandler
 	private var catchExceptionListener: CatchExceptionListener? = null
 
-	fun debug(): CrashHandler {
-		isDebug = true
-		return this
-	}
-
-	fun autoClean(dayTime: Int): CrashHandler {
-		if (dayTime <= 0) throw Exception("time can not less than zero! ")
-		autoCleanTime = dayTime * 24 * 60 * 60 * 1000
+	fun setConfig(config: CrashConfig): CrashHandler {
+		this.config = config
+		dir = File(context.cacheDir, config.dirName)
 		return this
 	}
 
@@ -93,36 +88,24 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 		return this
 	}
 
-	fun setPrefix(prefix: String): CrashHandler {
-		if (TextUtils.isEmpty(prefix)) Log.w(TAG, "file prefix is null")
-		fileNamePrefix = prefix
-		return this
-	}
-
-	fun setSuffix(suffix: String): CrashHandler {
-		if (TextUtils.isEmpty(suffix)) Log.w(TAG, "file suffix is null")
-		fileNameSuffix = suffix
-		return this
-	}
-
 	fun clean(autoCleanListener: AutoCleanListener) {
 		clean({ autoCleanListener.cleanDone() }, { ex -> autoCleanListener.cleanError(ex) })
 	}
 
 	fun clean(listener: () -> Unit, errorListener: (Exception) -> Unit) {
-		if (!isAutoClean) {
+		if (!config.isAutoClean) {
 			errorListener(RuntimeException("auto clean is disabled"))
 		}
-		if (isDebug) Log.d(TAG, "clean: time: $autoCleanTime")
+		if (config.isDebug) Log.d(TAG, "clean: time: ${config.autoCleanTime}")
 		val calendar = Calendar.getInstance()
 		if (dir.exists() || dir.mkdirs()) for (file in dir.listFiles()) {
-			if (file.name.startsWith(fileNamePrefix) && file.name.endsWith(fileNameSuffix)) {
+			if (file.name.startsWith(config.fileNamePrefix) && file.name.endsWith(config.fileNameSuffix)) {
 				val modified = file.lastModified()
-				if (isDebug) {
+				if (config.isDebug) {
 					Log.d(TAG, "clean: fileName: ${file.name}")
 					Log.d(TAG, "clean: fileLastModified: $modified")
 				}
-				if (calendar.timeInMillis - modified >= autoCleanTime) file.delete()
+				if (calendar.timeInMillis - modified >= config.autoCleanTime) file.delete()
 			}
 		}
 		listener()
@@ -144,24 +127,23 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 
 	fun init() {
 		defaultCrashHandler = Thread.getDefaultUncaughtExceptionHandler()
-		Thread.setDefaultUncaughtExceptionHandler(this)
+		Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+			dumpExceptionToFile(throwable)
+			throwable.printStackTrace()
+			defaultCrashHandler.uncaughtException(thread, throwable)
+		}
 	}
 
-	override fun uncaughtException(t: Thread?, e: Throwable) {
-		dumpExceptionToFile(e)
-		e.printStackTrace()
-		defaultCrashHandler.uncaughtException(t, e)
-	}
-
-	private fun dumpExceptionToFile(ex: Throwable) {
-		if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED) Log.w(TAG, "dumpExceptionToFile: sdcard is not mounted! ")
+	private fun dumpExceptionToFile(throwable: Throwable) {
+		if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED)
+			Log.e(TAG, "dumpExceptionToFile: sdcard is not mounted! ")
 		if (!dir.exists() && !dir.mkdirs()) {
-			Log.w(TAG, "dumpExceptionToFile: Dir is not exist! ")
+			Log.e(TAG, "dumpExceptionToFile: Dir is not exist! ")
 			return
 		}
 
 		val time = SimpleDateFormat("yyyy-MM-dd_HH:mm:ss", Locale.CHINA).format(Calendar.getInstance().time)
-		val file = File(dir, fileNamePrefix + time + '.' + fileNameSuffix)
+		val file = File(dir, "${config.fileNamePrefix}$time.${config.fileNameSuffix}")
 		try {
 			val printWriter = PrintWriter(BufferedWriter(FileWriter(file)))
 			//导出时间
@@ -179,11 +161,11 @@ class CrashHandler private constructor() : Thread.UncaughtExceptionHandler {
 			printWriter.println("Vendor: $vendor")
 			printWriter.println("Model: $model")
 			printWriter.println()
-			ex.printStackTrace(printWriter)
+			throwable.printStackTrace(printWriter)
 			printWriter.close()
-			catchExceptionListener?.catchException(CatchException(version, androidVersion, vendor, model, ex, file))
+			catchExceptionListener?.catchException(CatchException(version, androidVersion, vendor, model, throwable, file))
 		} catch (e: Exception) {
-			Log.wtf(TAG, "dump exception failed! ", e)
+			Log.e(TAG, "dump exception failed! ", e)
 		}
 	}
 }
