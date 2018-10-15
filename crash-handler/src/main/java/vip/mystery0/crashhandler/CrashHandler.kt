@@ -38,7 +38,7 @@ class CrashHandler private constructor() {
 
 		@JvmStatic
 		fun getInstance(context: Context): CrashHandler {
-			Companion.context = context.applicationContext
+			this.context = context.applicationContext
 			return CrashHandler()
 		}
 	}
