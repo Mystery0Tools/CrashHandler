@@ -68,6 +68,11 @@ class CrashHandler private constructor() {
 		return this
 	}
 
+	fun config(listener: (CrashConfig) -> Unit): CrashHandler {
+		listener.invoke(config)
+		return this
+	}
+
 	fun setDir(dir: File): CrashHandler {
 		if (!dir.exists()) dir.mkdirs()
 		this.dir = dir
