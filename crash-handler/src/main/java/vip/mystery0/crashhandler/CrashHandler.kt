@@ -30,18 +30,10 @@ import java.io.PrintWriter
 import java.text.SimpleDateFormat
 import java.util.*
 
-class CrashHandler private constructor() {
-	companion object {
-		private const val TAG = "CrashHandler"
-		@SuppressLint("StaticFieldLeak")
-		private lateinit var context: Context
-
-		@JvmStatic
-		fun getInstance(context: Context): CrashHandler {
-			this.context = context.applicationContext
-			return CrashHandler()
-		}
-	}
+@SuppressLint("StaticFieldLeak")
+object CrashHandler {
+	private const val TAG = "CrashHandler"
+	private lateinit var context: Context
 
 	interface AutoCleanListener {
 		fun cleanDone()
@@ -130,7 +122,8 @@ class CrashHandler private constructor() {
 		return this
 	}
 
-	fun init() {
+	fun init(context: Context) {
+		this.context = context.applicationContext
 		defaultCrashHandler = Thread.getDefaultUncaughtExceptionHandler()
 		Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
 			dumpExceptionToFile(throwable)
