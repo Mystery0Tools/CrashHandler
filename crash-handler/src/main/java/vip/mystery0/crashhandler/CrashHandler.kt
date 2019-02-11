@@ -34,29 +34,26 @@ import java.util.*
 object CrashHandler {
 	private const val TAG = "CrashHandler"
 	private lateinit var context: Context
-
-	interface AutoCleanListener {
-		fun cleanDone()
-		fun cleanError(ex: Exception)
-	}
-
-	interface CatchExceptionListener {
-		fun catchException(catchException: CatchException)
-	}
-
 	private var config = CrashConfig()
-	private var dir = File((
-			if (config.inSDCard)
-				context.externalCacheDir
-			else
-				context.cacheDir
-			), config.dirName)
 	private lateinit var defaultCrashHandler: Thread.UncaughtExceptionHandler
+	private var autoCleanListener: AutoCleanListener? = null
 	private var catchExceptionListener: CatchExceptionListener? = null
+
+	private fun getContext(): Context {
+		if (::context.isInitialized)
+			return context
+		throw Exception("this function need context, please call “CrashHandler.initWithContext(Context)” first.")
+	}
+	private fun getDir(): File {
+		if (config.dir == null)
+			config.dir = getContext().externalCacheDir
+		if (!config.dir!!.exists())
+			config.dir!!.mkdirs()
+		return config.dir!!
+	}
 
 	fun setConfig(config: CrashConfig): CrashHandler {
 		this.config = config
-		dir = File(context.cacheDir, config.dirName)
 		return this
 	}
 
@@ -65,47 +62,34 @@ object CrashHandler {
 		return this
 	}
 
-	fun setDir(dir: File): CrashHandler {
-		if (!dir.exists()) dir.mkdirs()
-		this.dir = dir
-		return this
-	}
-
-	fun setDir(dirPath: String): CrashHandler {
-		val file = File(dirPath)
-		if (!file.exists()) file.mkdirs()
-		this.dir = file
-		return this
-	}
-
-	fun setDir(listener: () -> File): CrashHandler {
-		val file = listener()
-		if (!file.exists()) file.mkdirs()
-		this.dir = file
-		return this
-	}
-
-	fun clean(autoCleanListener: AutoCleanListener) {
-		clean({ autoCleanListener.cleanDone() }, { ex -> autoCleanListener.cleanError(ex) })
-	}
-
-	fun clean(listener: () -> Unit, errorListener: (Exception) -> Unit) {
-		if (!config.isAutoClean) {
-			errorListener(RuntimeException("auto clean is disabled"))
-		}
-		if (config.isDebug) Log.d(TAG, "clean: time: ${config.autoCleanTime}")
-		val calendar = Calendar.getInstance()
-		if (dir.exists() || dir.mkdirs()) for (file in dir.listFiles()) {
-			if (file.name.startsWith(config.fileNamePrefix) && file.name.endsWith(config.fileNameSuffix)) {
-				val modified = file.lastModified()
-				if (config.isDebug) {
-					Log.d(TAG, "clean: fileName: ${file.name}")
-					Log.d(TAG, "clean: fileLastModified: $modified")
-				}
-				if (calendar.timeInMillis - modified >= config.autoCleanTime) file.delete()
+	private fun clean() {
+		try {
+			if (!config.isAutoClean) {
+				if (config.isDebug) Log.d(TAG, "auto clean is disabled")
+				return
 			}
+			if (config.dir == null || !config.dir!!.exists()) {
+				Log.w(TAG, "crash dir not exist")
+				return
+			}
+			val dir = getDir()
+			if (config.isDebug) Log.d(TAG, "clean: time: ${config.autoCleanTime}")
+			val calendar = Calendar.getInstance()
+			if (dir.exists() || dir.mkdirs())
+				for (file in dir.listFiles()) {
+					if (file.name.startsWith(config.fileNamePrefix) && file.name.endsWith(config.fileNameSuffix)) {
+						val modified = file.lastModified()
+						if (config.isDebug) {
+							Log.d(TAG, "clean: fileName: ${file.name}")
+							Log.d(TAG, "clean: fileLastModified: $modified")
+						}
+						if (calendar.timeInMillis - modified >= config.autoCleanTime) file.delete()
+					}
+				}
+			autoCleanListener?.cleanDone()
+		} catch (e: Exception) {
+			autoCleanListener?.cleanError(e)
 		}
-		listener()
 	}
 
 	fun doOnCatch(listener: (CatchException) -> Unit): CrashHandler {
@@ -122,7 +106,12 @@ object CrashHandler {
 		return this
 	}
 
-	fun init(context: Context) {
+	fun autoClean(listener: AutoCleanListener): CrashHandler {
+		autoCleanListener = listener
+		return this
+	}
+
+	fun initWithContext(context: Context) {
 		this.context = context.applicationContext
 		defaultCrashHandler = Thread.getDefaultUncaughtExceptionHandler()
 		Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
@@ -130,23 +119,23 @@ object CrashHandler {
 			throwable.printStackTrace()
 			defaultCrashHandler.uncaughtException(thread, throwable)
 		}
+		clean()
 	}
 
 	private fun dumpExceptionToFile(throwable: Throwable) {
 		if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED)
 			Log.e(TAG, "dumpExceptionToFile: sdcard is not mounted! ")
+		val dir = getDir()
 		if (!dir.exists() && !dir.mkdirs()) {
 			Log.e(TAG, "dumpExceptionToFile: Dir is not exist! ")
 			return
 		}
-
 		val time = SimpleDateFormat("yyyy-MM-dd_HH:mm:ss", Locale.CHINA).format(Calendar.getInstance().time)
 		val file = File(dir, "${config.fileNamePrefix}$time.${config.fileNameSuffix}")
 		try {
 			val printWriter = PrintWriter(BufferedWriter(FileWriter(file)))
 			//导出时间
 			printWriter.println(time)
-
 			//导出手机信息
 			val packageManager = context.packageManager
 			val packageInfo = packageManager.getPackageInfo(context.packageName, PackageManager.GET_ACTIVITIES)
@@ -165,5 +154,14 @@ object CrashHandler {
 		} catch (e: Exception) {
 			Log.e(TAG, "dump exception failed! ", e)
 		}
+	}
+
+	interface AutoCleanListener {
+		fun cleanDone()
+		fun cleanError(ex: Exception)
+	}
+
+	interface CatchExceptionListener {
+		fun catchException(catchException: CatchException)
 	}
 }
