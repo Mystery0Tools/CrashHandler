@@ -1,5 +1,7 @@
 package vip.mystery0.crashhandler
 
+import java.io.File
+
 class CrashConfig {
 	var fileNamePrefix = "crash"
 	var fileNameSuffix = "txt"
@@ -7,7 +9,7 @@ class CrashConfig {
 	var isDebug = false
 	var isAutoClean = false
 	var dirName = "CrashHandler"
-	var inSDCard = true
+	var dir: File? = null
 
 	fun setFileNamePrefix(fileNamePrefix: String): CrashConfig {
 		this.fileNamePrefix = fileNamePrefix
@@ -39,8 +41,9 @@ class CrashConfig {
 		return this
 	}
 
-	fun setInSDCard(inSDCard: Boolean): CrashConfig {
-		this.inSDCard = inSDCard
+	fun setDir(dir: File): CrashConfig {
+		if (!dir.exists()) dir.mkdirs()
+		this.dir = dir
 		return this
 	}
 }
