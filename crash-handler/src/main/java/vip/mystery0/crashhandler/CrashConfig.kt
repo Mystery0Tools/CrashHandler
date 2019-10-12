@@ -4,12 +4,21 @@ import java.io.File
 
 class CrashConfig {
 	var fileNamePrefix = "crash"
+		private set
 	var fileNameSuffix = "txt"
+		private set
 	var autoCleanTime: Long = 3 * 24 * 60 * 60 * 1000
+		private set
 	var isDebug = false
+		private set
 	var isAutoClean = false
+		private set
 	var dirName = "CrashHandler"
+		private set
 	var dir: File? = null
+		private set
+	var version: String = "not defined version"
+		private set
 
 	fun setFileNamePrefix(fileNamePrefix: String): CrashConfig {
 		this.fileNamePrefix = fileNamePrefix

@@ -17,11 +17,7 @@
 
 package vip.mystery0.crashhandler
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Environment
 import android.util.Log
 import java.io.BufferedWriter
 import java.io.File
@@ -30,27 +26,12 @@ import java.io.PrintWriter
 import java.text.SimpleDateFormat
 import java.util.*
 
-@SuppressLint("StaticFieldLeak")
 object CrashHandler {
 	private const val TAG = "CrashHandler"
-	private lateinit var context: Context
 	private var config = CrashConfig()
-	private lateinit var defaultCrashHandler: Thread.UncaughtExceptionHandler
-	private var autoCleanListener: AutoCleanListener? = null
+	private var defaultCrashHandler: Thread.UncaughtExceptionHandler? = null
+	private var autoCleanListener: ((File) -> Unit)? = null
 	private var catchExceptionListener: CatchExceptionListener? = null
-
-	private fun getContext(): Context {
-		if (::context.isInitialized)
-			return context
-		throw Exception("this function need context, please call “CrashHandler.initWithContext(Context)” first.")
-	}
-	private fun getDir(): File {
-		if (config.dir == null)
-			config.dir = getContext().externalCacheDir
-		if (!config.dir!!.exists())
-			config.dir!!.mkdirs()
-		return config.dir!!
-	}
 
 	fun setConfig(config: CrashConfig): CrashHandler {
 		this.config = config
@@ -63,33 +44,42 @@ object CrashHandler {
 	}
 
 	private fun clean() {
-		try {
-			if (!config.isAutoClean) {
-				if (config.isDebug) Log.d(TAG, "auto clean is disabled")
-				return
-			}
-			if (config.dir == null || !config.dir!!.exists()) {
-				Log.w(TAG, "crash dir not exist")
-				return
-			}
-			val dir = getDir()
-			if (config.isDebug) Log.d(TAG, "clean: time: ${config.autoCleanTime}")
-			val calendar = Calendar.getInstance()
-			if (dir.exists() || dir.mkdirs())
-				for (file in dir.listFiles()) {
-					if (file.name.startsWith(config.fileNamePrefix) && file.name.endsWith(config.fileNameSuffix)) {
-						val modified = file.lastModified()
-						if (config.isDebug) {
-							Log.d(TAG, "clean: fileName: ${file.name}")
-							Log.d(TAG, "clean: fileLastModified: $modified")
-						}
-						if (calendar.timeInMillis - modified >= config.autoCleanTime) file.delete()
-					}
-				}
-			autoCleanListener?.cleanDone()
-		} catch (e: Exception) {
-			autoCleanListener?.cleanError(e)
+		if (!config.isAutoClean) {
+			log("自动清理已关闭", Log.DEBUG)
+			return
 		}
+		if (config.dir == null || !config.dir!!.exists()) {
+			log("日志目录不存在", Log.DEBUG)
+			return
+		}
+		val dir = config.dir!!
+		log("clean: time: ${config.autoCleanTime}", Log.DEBUG)
+		val calendar = Calendar.getInstance()
+		if (dir.exists() || dir.mkdirs())
+			for (file in dir.listFiles()!!) {
+				if (file.name.startsWith(config.fileNamePrefix) && file.name.endsWith(config.fileNameSuffix)) {
+					val modified = file.lastModified()
+					log("clean: fileName: ${file.name}", Log.DEBUG)
+					log("clean: fileLastModified: $modified", Log.DEBUG)
+					if (calendar.timeInMillis - modified >= config.autoCleanTime) autoCleanListener?.invoke(file)
+				}
+			}
+	}
+
+	fun autoClean(autoCleanTime: Long = 3 * 24 * 60 * 60 * 1000, listener: (File) -> Unit): CrashHandler {
+		config.setAutoCleanTime(autoCleanTime)
+		config.setAutoClean(true)
+		this.autoCleanListener = listener
+		return this
+	}
+
+	fun autoClean(autoCleanTime: Long, listener: AutoCleanListener): CrashHandler {
+		config.setAutoCleanTime(autoCleanTime)
+		config.setAutoClean(true)
+		autoCleanListener = {
+			listener.clean(it)
+		}
+		return this
 	}
 
 	fun doOnCatch(listener: (CatchException) -> Unit): CrashHandler {
@@ -106,28 +96,20 @@ object CrashHandler {
 		return this
 	}
 
-	fun autoClean(listener: AutoCleanListener): CrashHandler {
-		autoCleanListener = listener
-		return this
-	}
-
-	fun initWithContext(context: Context) {
-		this.context = context.applicationContext
+	fun init() {
 		defaultCrashHandler = Thread.getDefaultUncaughtExceptionHandler()
 		Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
 			dumpExceptionToFile(throwable)
 			throwable.printStackTrace()
-			defaultCrashHandler.uncaughtException(thread, throwable)
+			defaultCrashHandler?.uncaughtException(thread, throwable)
 		}
 		clean()
 	}
 
 	private fun dumpExceptionToFile(throwable: Throwable) {
-		if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED)
-			Log.e(TAG, "dumpExceptionToFile: sdcard is not mounted! ")
-		val dir = getDir()
-		if (!dir.exists() && !dir.mkdirs()) {
-			Log.e(TAG, "dumpExceptionToFile: Dir is not exist! ")
+		val dir = config.dir
+		if (dir == null || (!dir.exists() && !dir.mkdirs())) {
+			log("dumpExceptionToFile: 目录不存在! ", Log.ERROR)
 			return
 		}
 		val time = SimpleDateFormat("yyyy-MM-dd_HH:mm:ss", Locale.CHINA).format(Calendar.getInstance().time)
@@ -137,28 +119,32 @@ object CrashHandler {
 			//导出时间
 			printWriter.println(time)
 			//导出手机信息
-			val packageManager = context.packageManager
-			val packageInfo = packageManager.getPackageInfo(context.packageName, PackageManager.GET_ACTIVITIES)
-			val version = "${packageInfo.versionName}_${packageInfo.versionCode}"
+			val version = config.version
 			val androidVersion = "${Build.VERSION.RELEASE}_${Build.VERSION.SDK_INT}"
 			val vendor = Build.MANUFACTURER
 			val model = Build.MODEL
-			printWriter.println("Version: $version")
-			printWriter.println("Android Version: $androidVersion")
-			printWriter.println("Vendor: $vendor")
-			printWriter.println("Model: $model")
+			printWriter.println("===================================")
+			printWriter.println("应用版本: $version")
+			printWriter.println("Android版本: $androidVersion")
+			printWriter.println("厂商: $vendor")
+			printWriter.println("型号: $model")
+			printWriter.println("===================================")
 			printWriter.println()
 			throwable.printStackTrace(printWriter)
 			printWriter.close()
 			catchExceptionListener?.catchException(CatchException(version, androidVersion, vendor, model, throwable, file))
 		} catch (e: Exception) {
-			Log.e(TAG, "dump exception failed! ", e)
+			Log.e(TAG, "dumpExceptionToFile: 异常信息导出失败! ", e)
 		}
 	}
 
+	private fun log(message: String, level: Int = Log.INFO) {
+		if (level >= Log.WARN || config.isDebug)
+			Log.println(level, TAG, message)
+	}
+
 	interface AutoCleanListener {
-		fun cleanDone()
-		fun cleanError(ex: Exception)
+		fun clean(file: File)
 	}
 
 	interface CatchExceptionListener {
