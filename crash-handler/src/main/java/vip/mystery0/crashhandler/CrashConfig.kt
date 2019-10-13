@@ -55,4 +55,9 @@ class CrashConfig {
 		this.dir = dir
 		return this
 	}
+
+	fun setVersion(version: String): CrashConfig {
+		this.version = version
+		return this
+	}
 }

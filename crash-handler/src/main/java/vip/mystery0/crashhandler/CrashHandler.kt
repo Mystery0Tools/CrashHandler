@@ -39,7 +39,7 @@ object CrashHandler {
 	}
 
 	fun config(listener: (CrashConfig) -> Unit): CrashHandler {
-		listener.invoke(config)
+		listener(config)
 		return this
 	}
 
