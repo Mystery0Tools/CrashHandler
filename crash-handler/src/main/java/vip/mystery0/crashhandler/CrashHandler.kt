@@ -38,7 +38,7 @@ object CrashHandler {
 		return this
 	}
 
-	fun config(listener: (CrashConfig) -> Unit): CrashHandler {
+	fun config(listener: CrashConfig.() -> Unit): CrashHandler {
 		listener(config)
 		return this
 	}
@@ -82,7 +82,7 @@ object CrashHandler {
 		return this
 	}
 
-	fun doOnCatch(listener: (CatchException) -> Unit): CrashHandler {
+	fun doOnCatch(listener: CatchException.() -> Unit): CrashHandler {
 		catchExceptionListener = object : CatchExceptionListener {
 			override fun catchException(catchException: CatchException) {
 				listener(catchException)
