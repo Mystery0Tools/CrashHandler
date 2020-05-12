@@ -1,6 +1,7 @@
 package vip.mystery0.crashhandler
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 class CrashConfig {
 	var fileNamePrefix = "crash"
@@ -12,8 +13,6 @@ class CrashConfig {
 	var isDebug = false
 		private set
 	var isAutoClean = false
-		private set
-	var dirName = "CrashHandler"
 		private set
 	var dir: File? = null
 		private set
@@ -35,6 +34,11 @@ class CrashConfig {
 		return this
 	}
 
+	fun setAutoCleanTime(autoCleanTime: Long, timeUnit: TimeUnit): CrashConfig {
+		this.autoCleanTime = timeUnit.toMillis(autoCleanTime)
+		return this
+	}
+
 	fun setDebug(isDebug: Boolean): CrashConfig {
 		this.isDebug = isDebug
 		return this
@@ -42,11 +46,6 @@ class CrashConfig {
 
 	fun setAutoClean(isAutoClean: Boolean): CrashConfig {
 		this.isAutoClean = isAutoClean
-		return this
-	}
-
-	fun setDirName(dirName: String): CrashConfig {
-		this.dirName = dirName
 		return this
 	}
 
