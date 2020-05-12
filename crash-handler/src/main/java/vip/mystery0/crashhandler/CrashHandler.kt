@@ -30,7 +30,7 @@ object CrashHandler {
 	private const val TAG = "CrashHandler"
 	private var config = CrashConfig()
 	private var defaultCrashHandler: Thread.UncaughtExceptionHandler? = null
-	private var autoCleanListener: ((File) -> Unit)? = null
+	private var autoCleanListener: (File.() -> Unit)? = null
 	private var catchExceptionListener: CatchExceptionListener? = null
 
 	fun setConfig(config: CrashConfig): CrashHandler {
@@ -66,7 +66,7 @@ object CrashHandler {
 			}
 	}
 
-	fun autoClean(autoCleanTime: Long = 3 * 24 * 60 * 60 * 1000, listener: (File) -> Unit): CrashHandler {
+	fun autoClean(autoCleanTime: Long = 3 * 24 * 60 * 60 * 1000, listener: File.() -> Unit): CrashHandler {
 		config.setAutoCleanTime(autoCleanTime)
 		config.setAutoClean(true)
 		this.autoCleanListener = listener
@@ -77,7 +77,7 @@ object CrashHandler {
 		config.setAutoCleanTime(autoCleanTime)
 		config.setAutoClean(true)
 		autoCleanListener = {
-			listener.clean(it)
+			listener.clean(this)
 		}
 		return this
 	}
