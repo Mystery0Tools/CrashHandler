@@ -17,13 +17,14 @@
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'maven-publish'
 
 android {
-	compileSdkVersion 29
+	compileSdkVersion 30
 
 	defaultConfig {
 		minSdkVersion 14
-		targetSdkVersion 29
+		targetSdkVersion 30
 		versionCode 1
 		versionName POM_VERSION
 	}
@@ -37,5 +38,34 @@ repositories {
 	mavenCentral()
 }
 
-// 在底部加上这句
-apply from: '../push.gradle'
+task generateSourcesJar(type: Jar) {
+	from android.sourceSets.main.java.srcDirs
+	classifier 'sources'
+}
+
+afterEvaluate {
+	publishing {
+		publications {
+			Production(MavenPublication) {
+				from components.release
+				groupId = POM_GROUP_ID
+				artifactId = POM_ARTIFACT_ID
+				version = POM_VERSION
+				// 上传source，这样使用方可以看到方法注释
+				artifact generateSourcesJar
+			}
+		}
+		repositories {
+			// 定义一个 maven 仓库
+			maven {
+				// 根据 versionName 来判断仓库地址
+				url = POM_VERSION.endsWith('SNAPSHOT') ? SNAPSHOT_REPOSITORY_URL : RELEASE_REPOSITORY_URL
+				// 仓库用户名密码
+				credentials {
+					username = System.getenv("NEXUS_USER")
+					password = System.getenv("NEXUS_KEY")
+				}
+			}
+		}
+	}
+}
